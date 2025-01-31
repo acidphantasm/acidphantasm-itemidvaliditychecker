@@ -1,0 +1,9 @@
+/.buildignore
+/.eslintignore
+/.eslintrc.json
+/.vscode
+/build.mjs
+/dist
+/package-lock.json
+/README.md
+/types

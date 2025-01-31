@@ -1,0 +1,16 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "extensions": {
+        "recommendations": [
+            "dbaeumer.vscode-eslint",
+            "refringe.spt-id-highlighter"
+        ]
+    },
+    "settings": {
+        "git.openRepositoryInParentFolders": "never"
+    }
+}
