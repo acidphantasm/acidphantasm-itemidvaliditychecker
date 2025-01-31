@@ -18,6 +18,7 @@ class Mod implements IPostDBLoadMod
     private invalidWeaponAttachmentIDs: string[] = [];
     private invalidEquipmentIDs: string[] = [];
     private invalidEquipmentAttachmentIDs: string[] = [];
+    private uncategorizedIDs: string[] = [];
 
     public postDBLoad(container: DependencyContainer): void
     {
@@ -25,17 +26,22 @@ class Mod implements IPostDBLoadMod
         this.itemHelper = container.resolve<ItemHelper>("ItemHelper");
         this.allItems = Object.values(this.databaseServer.getTables().templates.items);
 
-        this.getInvalidWeaponItemIDs()
-        this.getInvalidWeaponAttachmentItemIDs()
-        this.getInvalidEquipmentItemIDs()
-        this.getInvalidEquipmentAttachmentItemIDs()
+        // Categorized IDs
+        this.getInvalidWeaponItemIDs();
+        this.getInvalidWeaponAttachmentItemIDs();
+        this.getInvalidEquipmentItemIDs();
+        this.getInvalidEquipmentAttachmentItemIDs();
 
-        if (this.invalidWeaponIDs.length > 0) console.log(`${this.invalidWeaponIDs.length} invalid weapon IDs: ${JSON.stringify(this.invalidWeaponIDs)}`)
-        if (this.invalidWeaponAttachmentIDs.length > 0) console.log(`${this.invalidWeaponAttachmentIDs.length} invalid weapon attachment IDs: ${JSON.stringify(this.invalidWeaponAttachmentIDs)}`)
-        if (this.invalidEquipmentIDs.length > 0) console.log(`${this.invalidEquipmentIDs.length} invalid equipment IDs: ${JSON.stringify(this.invalidEquipmentIDs)}`)
-        if (this.invalidEquipmentAttachmentIDs.length > 0) console.log(`${this.invalidEquipmentAttachmentIDs.length} invalid equipment attachment IDs: ${JSON.stringify(this.invalidEquipmentAttachmentIDs)}`)
+        // Everything that hasn't already been checked
+        this.getOtherInvalidIDs();
 
-        console.log("Item Checking Complete")
+        if (this.invalidWeaponIDs.length > 0) console.log(`${this.invalidWeaponIDs.length} invalid weapon IDs: ${JSON.stringify(this.invalidWeaponIDs)}`);
+        if (this.invalidWeaponAttachmentIDs.length > 0) console.log(`${this.invalidWeaponAttachmentIDs.length} invalid weapon attachment IDs: ${JSON.stringify(this.invalidWeaponAttachmentIDs)}`);
+        if (this.invalidEquipmentIDs.length > 0) console.log(`${this.invalidEquipmentIDs.length} invalid equipment IDs: ${JSON.stringify(this.invalidEquipmentIDs)}`);
+        if (this.invalidEquipmentAttachmentIDs.length > 0) console.log(`${this.invalidEquipmentAttachmentIDs.length} invalid equipment attachment IDs: ${JSON.stringify(this.invalidEquipmentAttachmentIDs)}`);
+        if (this.uncategorizedIDs.length > 0) console.log(`${this.uncategorizedIDs.length} remainder of extra invalid IDs: ${JSON.stringify(this.uncategorizedIDs)}`);
+
+        console.log("Item Checking Complete");
     }
 
     private getInvalidWeaponItemIDs(): void
@@ -185,6 +191,22 @@ class Mod implements IPostDBLoadMod
         }
     }
 
+    private getOtherInvalidIDs(): void
+    {
+        const items = this.allItems.filter(x => this.itemHelper.isOfBaseclass(x._id, BaseClasses.ITEM));
+
+        for (const item in items)
+        {
+            const itemID = items[item]._id;
+
+            if (this.alreadyCheckedIDs.includes(itemID)) continue;
+            this.alreadyCheckedIDs.push(itemID);
+
+            // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip to next item
+            if (!this.doesItemExist(itemID, "remainder")) continue;
+        }
+    }
+
     private doesItemExist(itemID: string, type: string): boolean
     {
         const itemExists = this.itemHelper.getItem(itemID)[0];
@@ -204,6 +226,9 @@ class Mod implements IPostDBLoadMod
                     break;
                 case "equipmentAttachment":
                     if (!this.invalidEquipmentAttachmentIDs.includes(itemID)) this.invalidEquipmentAttachmentIDs.push(itemID);
+                    break;
+                case "remainder":
+                    if (!this.uncategorizedIDs.includes(itemID)) this.uncategorizedIDs.push(itemID);
                     break;
                 default:
                     console.log("Something broke...woops.")
