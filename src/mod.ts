@@ -202,8 +202,34 @@ class Mod implements IPostDBLoadMod
             if (this.alreadyCheckedIDs.includes(itemID)) continue;
             this.alreadyCheckedIDs.push(itemID);
 
-            // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip to next item
-            if (!this.doesItemExist(itemID, "remainder")) continue;
+            const itemSlots = items[item]?._props?.Slots;
+
+            for (const slot in itemSlots)
+            {
+                const slotName = itemSlots[slot]?._name;
+                const slotFilter = itemSlots[slot]?._props?.filters[0]?.Filter
+
+                // If filter has items
+                if (slotFilter.length > 0)
+                {
+                    // Loop over all items in the filter for the slot
+                    for (const item in slotFilter)
+                    {
+                        const slotFilterItem = slotFilter[item];
+
+                        if (this.alreadyCheckedIDs.includes(slotFilterItem)) continue;                
+                        this.alreadyCheckedIDs.push(slotFilterItem);
+
+                        // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip remainder of code
+                        if (!this.doesItemExist(slotFilterItem, "remainder")) continue;
+
+                        // Get Item Data now that we know it exists
+                        const itemData = this.itemHelper.getItem(slotFilterItem)[1]
+
+                        this.recursiveItemCheck(itemData, "remainder");
+                    }
+                }
+            }
         }
     }
 
