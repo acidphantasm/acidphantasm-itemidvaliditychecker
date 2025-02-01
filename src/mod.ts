@@ -5,11 +5,13 @@ import { DatabaseServer } from "@spt/servers/DatabaseServer";
 import { ItemHelper } from "@spt/helpers/ItemHelper";
 import { BaseClasses } from "@spt/models/enums/BaseClasses";
 import { ITemplateItem } from "@spt/models/eft/common/tables/ITemplateItem";
+import { ILogger } from "@spt/models/spt/utils/ILogger";
 
 class Mod implements IPostDBLoadMod
 {
     private databaseServer: DatabaseServer;
     private itemHelper: ItemHelper;
+    private logger: ILogger;
 
     private allItems: ITemplateItem[];
 
@@ -24,6 +26,7 @@ class Mod implements IPostDBLoadMod
     {
         this.databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
         this.itemHelper = container.resolve<ItemHelper>("ItemHelper");
+        this.logger = container.resolve<ILogger>("WinstonLogger");
         this.allItems = Object.values(this.databaseServer.getTables().templates.items);
 
         // Categorized IDs
@@ -35,13 +38,13 @@ class Mod implements IPostDBLoadMod
         // Everything that hasn't already been checked
         this.getOtherInvalidIDs();
 
-        if (this.invalidWeaponIDs.length > 0) console.log(`${this.invalidWeaponIDs.length} invalid weapon IDs: ${JSON.stringify(this.invalidWeaponIDs)}`);
-        if (this.invalidWeaponAttachmentIDs.length > 0) console.log(`${this.invalidWeaponAttachmentIDs.length} invalid weapon attachment IDs: ${JSON.stringify(this.invalidWeaponAttachmentIDs)}`);
-        if (this.invalidEquipmentIDs.length > 0) console.log(`${this.invalidEquipmentIDs.length} invalid equipment IDs: ${JSON.stringify(this.invalidEquipmentIDs)}`);
-        if (this.invalidEquipmentAttachmentIDs.length > 0) console.log(`${this.invalidEquipmentAttachmentIDs.length} invalid equipment attachment IDs: ${JSON.stringify(this.invalidEquipmentAttachmentIDs)}`);
-        if (this.uncategorizedIDs.length > 0) console.log(`${this.uncategorizedIDs.length} remainder of extra invalid IDs: ${JSON.stringify(this.uncategorizedIDs)}`);
+        if (this.invalidWeaponIDs.length > 0) this.logger.warning(`${this.invalidWeaponIDs.length} invalid weapon IDs: ${JSON.stringify(this.invalidWeaponIDs)}`);
+        if (this.invalidWeaponAttachmentIDs.length > 0) this.logger.warning(`${this.invalidWeaponAttachmentIDs.length} invalid weapon attachment IDs: ${JSON.stringify(this.invalidWeaponAttachmentIDs)}`);
+        if (this.invalidEquipmentIDs.length > 0) this.logger.warning(`${this.invalidEquipmentIDs.length} invalid equipment IDs: ${JSON.stringify(this.invalidEquipmentIDs)}`);
+        if (this.invalidEquipmentAttachmentIDs.length > 0) this.logger.warning(`${this.invalidEquipmentAttachmentIDs.length} invalid equipment attachment IDs: ${JSON.stringify(this.invalidEquipmentAttachmentIDs)}`);
+        if (this.uncategorizedIDs.length > 0) this.logger.warning(`${this.uncategorizedIDs.length} remainder of extra invalid IDs: ${JSON.stringify(this.uncategorizedIDs)}`);
 
-        console.log("Item Checking Complete");
+        this.logger.success("Item Checking Complete");
     }
 
     private getInvalidWeaponItemIDs(): void
@@ -84,7 +87,7 @@ class Mod implements IPostDBLoadMod
                         if (this.alreadyCheckedIDs.includes(slotFilterItem)) continue;                
                         this.alreadyCheckedIDs.push(slotFilterItem);
 
-                        // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip remainder of code
+                        // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip to next item
                         if (!this.doesItemExist(slotFilterItem, "weaponAttachment")) continue;
 
                         // Get Item Data now that we know it exists
@@ -94,7 +97,7 @@ class Mod implements IPostDBLoadMod
                         if (slotName == "mod_magazine" && itemData?._props?.Cartridges[0]?._max_count == undefined)
                         {
                             if (!this.invalidWeaponAttachmentIDs.includes(slotFilterItem)) this.invalidWeaponAttachmentIDs.push(slotFilterItem);
-                            console.log(`Invalid mod magazine, missing _max_count. Skipping. MagazineID: ${slotFilterItem}`);
+                            this.logger.warning(`Invalid mod magazine, missing _max_count. MagazineID: ${slotFilterItem}`);
                             continue;
                         }
 
@@ -145,7 +148,7 @@ class Mod implements IPostDBLoadMod
                         if (this.alreadyCheckedIDs.includes(slotFilterItem)) continue;                
                         this.alreadyCheckedIDs.push(slotFilterItem);
 
-                        // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip remainder of code
+                        // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip to next item
                         if (!this.doesItemExist(slotFilterItem, "equipmentAttachment")) continue;
 
                         // Get Item Data now that we know it exists
@@ -180,7 +183,7 @@ class Mod implements IPostDBLoadMod
 
                 this.alreadyCheckedIDs.push(slotFilterItem);
 
-                // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip item
+                // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip to next item
                 if (!this.doesItemExist(slotFilterItem, type)) continue;
 
                 const itemData = this.itemHelper.getItem(slotFilterItem)[1]
@@ -220,7 +223,7 @@ class Mod implements IPostDBLoadMod
                         if (this.alreadyCheckedIDs.includes(slotFilterItem)) continue;                
                         this.alreadyCheckedIDs.push(slotFilterItem);
 
-                        // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip remainder of code
+                        // If item doesn't exist in the database, but some mod is adding it to filters, add it to array and skip to next item
                         if (!this.doesItemExist(slotFilterItem, "remainder")) continue;
 
                         // Get Item Data now that we know it exists
@@ -257,7 +260,7 @@ class Mod implements IPostDBLoadMod
                     if (!this.uncategorizedIDs.includes(itemID)) this.uncategorizedIDs.push(itemID);
                     break;
                 default:
-                    console.log("Something broke...woops.")
+                    this.logger.error("Something broke...woops. Didn't catch type of item.")
                     break;
             }
         }
